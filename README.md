@@ -1,4 +1,4 @@
-### TileDL Download by Zoom Level
+### A Script to Download MapTiler Tiles by Zoom Level
 
 ***Before running the script, please modify it to include your own API key!***
 
