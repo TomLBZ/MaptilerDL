@@ -37,7 +37,6 @@ To download tiles of type `sat` at zoom level `10` within a bounding box defined
 ```bash
 python3 tiledl.py test sat 10 --minlon 0 --minlat 0 --maxlon 1 --maxlat 1
 ```
-** Note:** The bounding box coordinates should be in radians. The script will automatically calculate the tile numbers based on the provided bounding box and zoom level.
 ### Download Sample Data for Singapore
 To download tiles for a region, at different zoom levels different bounding boxes should be used. Here are example bounding boxes for different zoom levels in Singapore:
 - For zoom levels `0` to `6`, the tiles for the entire globe should be downloaded.
