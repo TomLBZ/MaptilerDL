@@ -54,7 +54,7 @@ def lnglat_to_tile_coords(lng, lat, z):
     deg2rad = math.pi / 180.0
     lon = max(-179.99999999, min(179.99999999, lng)) # prevent overflow
     lon_n = lon / 360.0 + 0.5
-    lat = max(-89.99999999, min(89.99999999, lat)) # prevent overflow
+    lat = max(-85.0511, min(85.0511, lat)) # prevent overflow
     lat_rad = lat * deg2rad
     tan_lat = math.tan(lat_rad)
     sec_lat = 1 / math.cos(lat_rad)
