@@ -4,13 +4,15 @@ TYPE_NAMES = {
     "satellite-v2": ["satellite", "satellite-v2", "satellitev2", "sat"],
     "contours-v2": ["contours", "contours-v2", "contoursv2", "cnt"],
     "terrain-rgb-v2": ["terrain", "terrainrgb", "terrain-rgb", "terrain-rgb-v2", "terrainrgbv2", "trgb"],
-    "v3": ["v3", "v3tiles", "v3-tiles"]
+    "v3": ["v3", "v3tiles", "v3-tiles"],
+    "v4": ["v4", "v4tiles", "v4-tiles"]
 }
 EXT_NAME = {
     "satellite-v2": "jpg",
     "contours-v2": "pbf",
     "terrain-rgb-v2": "webp",
-    "v3": "pbf"
+    "v3": "pbf",
+    "v4": "pbf"
 }
 API_KEY = "get_your_own_OpIi9ZULNHzrESv6T2vL"
 URL_TEMPLATE = "https://api.maptiler.com/tiles/{t}/{z}/{x}/{y}.{e}?key={k}"
@@ -50,11 +52,16 @@ def lnglat_to_tile_coords(lng, lat, z):
         return 0, 0
     n = 2.0 ** z
     deg2rad = math.pi / 180.0
-    lon_deg = lng / 360.0 + 0.5
-    lat = max(-89.99999999, min(80.99999999, lat))
-    lat_deg = (1 - math.log(math.tan(lat * deg2rad) + 1 / math.cos(lat * deg2rad)) / math.pi) / 2.0
-    x = int(n * lon_deg)
-    y = int(n * lat_deg)
+    lon = max(-179.99999999, min(179.99999999, lng)) # prevent overflow
+    lon_n = lon / 360.0 + 0.5
+    lat = max(-89.99999999, min(89.99999999, lat)) # prevent overflow
+    lat_rad = lat * deg2rad
+    tan_lat = math.tan(lat_rad)
+    sec_lat = 1 / math.cos(lat_rad)
+    log_inner = tan_lat + sec_lat
+    lat_n = (1 - math.log(log_inner) / math.pi) / 2.0
+    x = int(n * lon_n)
+    y = int(n * lat_n)
     return x, y
 def get_tile_coords_list(z, mincoords = None, maxcoords = None):
     tile_side_count = 2 ** z
@@ -129,7 +136,13 @@ if __name__ == "__main__":
     parser.add_argument("--minlat", type=float, help="Minimum latitude")
     parser.add_argument("--maxlon", type=float, help="Maximum longitude")
     parser.add_argument("--maxlat", type=float, help="Maximum latitude")
+    parser.add_argument("--key", type=str, help="API Key")
     args = parser.parse_args()
+    # check if API key is provided
+    if args.key is not None:
+        API_KEY = args.key
+    else:
+        print("Warning: No API key provided. Using default key may not be able to download tiles.")
     # check if type is valid
     map_type = ""
     for key, values in TYPE_NAMES.items():
