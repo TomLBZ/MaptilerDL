@@ -14,12 +14,23 @@ class TileOption:
     ext: str
     aliases: List[str]
 @dataclass(frozen=True, slots=True, kw_only=True)
-class Arguments:
+class TileDLArguments:
     key: str
     dir: str
     option: TileOption
     zoom: int
     range: TileRange
+@dataclass(frozen=True, slots=True, kw_only=True)
+class BackoffConfig:
+    initial_wait: float = 1.0
+    max_wait: float = 60.0
+    min_wait: float = 1.0
+    fail_factor: float = 1.5
+    success_factor: float = 0.9
+    max_retries: int = 5
+@dataclass(frozen=False, slots=True, kw_only=True)
+class GlobalVariables:
+    wait_sec: float = 1.0
 
 # constants:
 MIN_LON: float = -179.99999999
@@ -37,10 +48,7 @@ TILE_OPTIONS: List[TileOption] = [
 ]
 TYPE_CHOICES: List[str] = [alias for option in TILE_OPTIONS for alias in option.aliases]
 
-# global variables:
-_wait_sec: float = 1.0 # start with waiting for 1 second between calls
-
-def parse_arguments() -> Arguments:
+def parse_arguments() -> TileDLArguments:
     parser = argparse.ArgumentParser(description="Download tiles from MapTiler.")
     # required arguments: key
     parser.add_argument("-k", "--key", type=str, required=True, default="get_your_own_OpIi9ZULNHzrESv6T2vL", help="Your MapTiler API key.")
@@ -53,31 +61,28 @@ def parse_arguments() -> Arguments:
     parser.add_argument("-r", "--range", type=float, nargs=4, metavar=("MINLON", "MINLAT", "MAXLON", "MAXLAT"), 
                         default=MAX_RANGE, help="Bounding box to download tiles")
     args = parser.parse_args()
-    return Arguments(
+    return TileDLArguments(
         key=args.key,
         dir=args.dir,
         option=next((option for option in TILE_OPTIONS if args.type in option.aliases), TILE_OPTIONS[0]),
         zoom=args.zoom,
         range=tuple(args.range)
     )
-
-def get_response_with_dynamic_wait_retry(url: str, max_retries: int = 5) -> Optional[requests.Response]:
-    global _wait_sec
-    for _ in range(max_retries):
+def get_response_dynamic_backoff(gvar: GlobalVariables, cfg: BackoffConfig, url: str) -> Optional[requests.Response]:
+    for _ in range(cfg.max_retries):
         try:
             response = requests.get(url)
             if response.status_code == 200:
-                _wait_sec = max(1.0, _wait_sec * 0.9)  # decrease wait time on success
+                gvar.wait_sec = max(cfg.min_wait, gvar.wait_sec * cfg.success_factor)  # decrease wait time on success
                 return response
             else:
-                print(f"Error: Received status code {response.status_code}. Retrying in {_wait_sec:.2f} seconds...")
+                print(f"Error: Received status code {response.status_code}. Retrying in {gvar.wait_sec:.2f} seconds...")
         except requests.RequestException as e:
-            print(f"Request failed: {e}. Retrying in {_wait_sec:.2f} seconds...")
-        time.sleep(_wait_sec)
-        _wait_sec *= 1.5  # increase wait time on failure
+            print(f"Request failed: {e}. Retrying in {gvar.wait_sec:.2f} seconds...")
+        time.sleep(gvar.wait_sec)
+        gvar.wait_sec = min(cfg.max_wait, gvar.wait_sec * cfg.fail_factor)  # increase wait time on failure
     print("Max retries reached. Failed to get a successful response.")
     return None
-
 def lnglat_to_tile_coords(lng: float, lat: float, z: int) -> Tuple[int, int]:
     if z == 0:
         return 0, 0
@@ -93,7 +98,6 @@ def lnglat_to_tile_coords(lng: float, lat: float, z: int) -> Tuple[int, int]:
     x = int(n * lon_n)
     y = int(n * lat_n)
     return x, y
-
 def get_tile_coords_list(tile_range: TileRange, zoom: int) -> List[Tuple[int, int]]:
     minlon, minlat, maxlon, maxlat = tile_range
     tile_side_count: int = 2 ** zoom
@@ -109,22 +113,20 @@ def get_tile_coords_list(tile_range: TileRange, zoom: int) -> List[Tuple[int, in
             return []
         print(f"Tile coordinates: ({minx}, {miny}) to ({maxx}, {maxy})")
         return [(x, y) for x in range(minx, maxx + 1) for y in range(miny, maxy + 1)]
-
-def download_one_tile(args: Arguments, x: int, y: int) -> int:
+def download_one_tile(gvar: GlobalVariables, args: TileDLArguments, cfg: BackoffConfig, x: int, y: int) -> int:
     tile_dir: str = os.path.join(args.dir, str(args.zoom), str(x))
     tile_path: str = os.path.join(tile_dir, f"{y}.{args.option.ext}")
     if os.path.exists(tile_path):
         return 0 # tile already exists, will skip downloading
     url: str = URL_TEMPLATE.format(t=args.option.name, z=args.zoom, x=x, y=y, e=args.option.ext, k=args.key)
-    response: Optional[requests.Response] = get_response_with_dynamic_wait_retry(url)
+    response: Optional[requests.Response] = get_response_dynamic_backoff(gvar, cfg, url)
     if response is not None:
         os.makedirs(tile_dir, exist_ok=True)
         with open(tile_path, "wb") as f:
             f.write(response.content)
         return response.status_code # return status code in case of success
     return -1 # failed to download after retries, tile not downloaded
-
-def download_tiles(args: Arguments):
+def download_tiles(gvar: GlobalVariables, args: TileDLArguments, cfg: BackoffConfig) -> None:
     tile_coords: List[Tuple[int, int]] = get_tile_coords_list(args.range, args.zoom)
     len_tiles = len(tile_coords) # number of tiles to download
     if len_tiles == 0:
@@ -138,7 +140,7 @@ def download_tiles(args: Arguments):
         tile_progress = f"{i + 1:>{len_digits}}/{len_tiles:>{len_digits}}"
         tile_coords_progress = f"({x:>{side_digits}}, {y:>{side_digits}})"
         print(f"\tDownloading {tile_progress}: {tile_coords_progress}... ", end="")
-        status_code = download_one_tile(args, x, y)
+        status_code = download_one_tile(gvar, args, cfg, x, y)
         if status_code == 0: # tile already exists, skip it
             print(f"SKP", end="\r")
             continue
@@ -147,13 +149,15 @@ def download_tiles(args: Arguments):
             print(f"OK ", end="\r")
         else: # error message and a new line
             print(f"\r\tError downloading tile {args.zoom:>2}/{x:>{side_digits}}/{y:>{side_digits}}: {status_code}{' ':>{side_digits}}")
-        time.sleep(_wait_sec) # wait before next request
+        time.sleep(gvar.wait_sec) # wait before next request
     print(f"\n...{downloaded_count} new tiles downloaded.")
 
 if __name__ == "__main__":
-    args: Arguments = parse_arguments()
+    args: TileDLArguments = parse_arguments()
     if not os.path.exists(args.dir):
         print(f"Directory {args.dir} does not exist. Creating it...")
         os.makedirs(args.dir)
-    download_tiles(args)
+    cfg: BackoffConfig = BackoffConfig()
+    gvars: GlobalVariables = GlobalVariables()
+    download_tiles(gvars, args, cfg)
     print("Done.")
