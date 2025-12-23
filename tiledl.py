@@ -31,6 +31,7 @@ class BackoffConfig:
 @dataclass(frozen=False, slots=True, kw_only=True)
 class GlobalVariables:
     wait_sec: float = 1.0
+    downloaded_count: int = 0
 
 # constants:
 MIN_LON: float = -179.99999999
@@ -76,12 +77,14 @@ def get_response_dynamic_backoff(gvar: GlobalVariables, cfg: BackoffConfig, url:
                 gvar.wait_sec = max(cfg.min_wait, gvar.wait_sec * cfg.success_factor)  # decrease wait time on success
                 return response
             else:
-                print(f"Error: Received status code {response.status_code}. Retrying in {gvar.wait_sec:.2f} seconds...")
+                print(f"\n\tError {response.status_code}.")
+                print(f"\tRetrying in {gvar.wait_sec:.2f} seconds... ", end="", flush=True)
         except requests.RequestException as e:
-            print(f"Request failed: {e}. Retrying in {gvar.wait_sec:.2f} seconds...")
+            print(f"\n\t{e}.")
+            print(f"\tRetrying in {gvar.wait_sec:.2f} seconds... ", end="", flush=True)
         time.sleep(gvar.wait_sec)
         gvar.wait_sec = min(cfg.max_wait, gvar.wait_sec * cfg.fail_factor)  # increase wait time on failure
-    print("Max retries reached. Failed to get a successful response.")
+    print("\n\tMax retries reached.")
     return None
 def lnglat_to_tile_coords(lng: float, lat: float, z: int) -> Tuple[int, int]:
     if z == 0:
@@ -135,22 +138,21 @@ def download_tiles(gvar: GlobalVariables, args: TileDLArguments, cfg: BackoffCon
     len_digits = len(str(len_tiles)) # number of digits in the number of tiles
     side_digits = len(str(2 ** args.zoom)) # number of digits in the side count
     print(f"Downloading {len_tiles} tiles for zoom level {args.zoom}...")
-    downloaded_count = 0
     for i, (x, y) in enumerate(tile_coords):
         tile_progress = f"{i + 1:>{len_digits}}/{len_tiles:>{len_digits}}"
         tile_coords_progress = f"({x:>{side_digits}}, {y:>{side_digits}})"
-        print(f"\tDownloading {tile_progress}: {tile_coords_progress}... ", end="")
+        print(f"\033[2K\tDownloading {tile_progress}: {tile_coords_progress}... ", end="", flush=True)
         status_code = download_one_tile(gvar, args, cfg, x, y)
         if status_code == 0: # tile already exists, skip it
             print(f"SKP", end="\r")
             continue
         elif status_code == 200: # tile downloaded successfully
-            downloaded_count += 1
+            gvar.downloaded_count += 1
             print(f"OK ", end="\r")
         else: # error message and a new line
             print(f"\r\tError downloading tile {args.zoom:>2}/{x:>{side_digits}}/{y:>{side_digits}}: {status_code}{' ':>{side_digits}}")
         time.sleep(gvar.wait_sec) # wait before next request
-    print(f"\n...{downloaded_count} new tiles downloaded.")
+    print(f"\n\t...{gvar.downloaded_count} new tiles downloaded.")
 
 if __name__ == "__main__":
     args: TileDLArguments = parse_arguments()
@@ -161,6 +163,6 @@ if __name__ == "__main__":
     gvars: GlobalVariables = GlobalVariables()
     try:
         download_tiles(gvars, args, cfg)
+        print("Done.")
     except KeyboardInterrupt:
-        print("\nDownload interrupted by user.")
-    print("Done.")
+        print(f"\n\t...{gvars.downloaded_count} new tiles downloaded.\nInterrupted by user.")
