@@ -159,5 +159,8 @@ if __name__ == "__main__":
         os.makedirs(args.dir)
     cfg: BackoffConfig = BackoffConfig()
     gvars: GlobalVariables = GlobalVariables()
-    download_tiles(gvars, args, cfg)
+    try:
+        download_tiles(gvars, args, cfg)
+    except KeyboardInterrupt:
+        print("\nDownload interrupted by user.")
     print("Done.")
