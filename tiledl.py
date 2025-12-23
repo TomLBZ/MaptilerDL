@@ -28,6 +28,7 @@ class BackoffConfig:
     fail_factor: float = 1.5
     success_factor: float = 0.9
     max_retries: int = 5
+    timeout: int = 5
 @dataclass(frozen=False, slots=True, kw_only=True)
 class GlobalVariables:
     wait_sec: float = 1.0
@@ -72,13 +73,16 @@ def parse_arguments() -> TileDLArguments:
 def get_response_dynamic_backoff(gvar: GlobalVariables, cfg: BackoffConfig, url: str) -> Optional[requests.Response]:
     for _ in range(cfg.max_retries):
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=cfg.timeout)
             if response.status_code == 200:
                 gvar.wait_sec = max(cfg.min_wait, gvar.wait_sec * cfg.success_factor)  # decrease wait time on success
                 return response
             else:
                 print(f"\n\tError {response.status_code}.")
                 print(f"\tRetrying in {gvar.wait_sec:.2f} seconds... ", end="", flush=True)
+        except requests.Timeout:
+            print(f"\n\tRequest timed out after {cfg.timeout} seconds.")
+            print(f"\tRetrying in {gvar.wait_sec:.2f} seconds... ", end="", flush=True)
         except requests.RequestException as e:
             print(f"\n\t{e}.")
             print(f"\tRetrying in {gvar.wait_sec:.2f} seconds... ", end="", flush=True)
