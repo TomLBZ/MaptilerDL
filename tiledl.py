@@ -243,5 +243,5 @@ if __name__ == "__main__":
             gvars.downloaded_count = 0 # reset for next level
         except KeyboardInterrupt:
             print(f"\n\t...{gvars.downloaded_count} new tiles downloaded.\nInterrupted by user.")
-            exit(0)
-    print(f"\nDone. Total new tiles downloaded: {gvars.total_downloaded_count}.")
+            break
+    print(f"Done. Total new tiles downloaded: {gvars.total_downloaded_count}.")
