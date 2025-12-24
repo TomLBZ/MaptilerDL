@@ -46,7 +46,8 @@ TILE_OPTIONS: List[TileOption] = [
     TileOption(name="contours-v2", ext="pbf", aliases=["contours", "contours-v2", "contoursv2", "cnt"]),
     TileOption(name="terrain-rgb-v2", ext="webp", aliases=["terrain", "terrainrgb", "terrain-rgb", "terrain-rgb-v2", "terrainrgbv2", "trgb"]),
     TileOption(name="v3", ext="pbf", aliases=["v3", "v3tiles", "v3-tiles", "tilesv3", "tiles-v3"]),
-    TileOption(name="v4", ext="pbf", aliases=["v4", "v4tiles", "v4-tiles", "tilesv4", "tiles-v4"])
+    TileOption(name="v4", ext="pbf", aliases=["v4", "v4tiles", "v4-tiles", "tilesv4", "tiles-v4"]),
+    TileOption(name="landform", ext="pbf", aliases=["landform", "lf", "landforms", "lfs"]),
 ]
 TYPE_CHOICES: List[str] = [alias for option in TILE_OPTIONS for alias in option.aliases]
 
