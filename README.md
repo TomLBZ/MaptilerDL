@@ -24,6 +24,7 @@ python3 tiledl.py -k <API_KEY> -d <dir> -t <type> -z <zoom> -r <range>
 | `terrain-rgb-v2` | Terrain RGB tiles | `trgb`, `terrain`, `terrainrgb`, `terrain-rgb`, `terrainrgbv2`, `terrain-rgb-v2` | `webp` |
 | `v3` | MapTiler Planet v3 tiles | `v3`, `v3tiles`, `v3-tiles`, `tilesv3`, `tiles-v3` | `pbf` |
 | `v4` | MapTiler Planet v4 tiles | `v4`, `v4tiles`, `v4-tiles`, `tilesv4`, `tiles-v4` | `pbf` |
+| `landform` | Landform tiles | `landform`, `lf`, `landforms`, `lfs` | `pbf` |
 
 ### Examples
 1. To download all satellite tiles at zoom level 2 at the `./tiles` folder, you would run:
