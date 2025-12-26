@@ -1,7 +1,7 @@
-# MapTilerDL: A Script to Download MapTiler Tiles
-This script allows you to download map tiles from the MapTiler API for offline use. You can specify the type of tiles, zoom level, bounding box, and output directory.
+# MapTilerDL: Scripts to Download MapTiler Tiles and Fonts
+This repository contains Python scripts to download map tiles and font files from the MapTiler API for offline use. The repository includes two main scripts: [`tiledl.py`](./tiledl.py) for downloading map tiles and [`fontdl.py`](./fontdl.py) for downloading font files.
 
-## Usage
+## Tile Downloader Usage
 ### Argument Table
 | Argument | Description | Default | Required |
 |-----------|-------------|---------|---------|
@@ -65,7 +65,7 @@ Some example configuration files are provided in this repository for downloading
     ```bash
     python3 tiledl.py -k <API_KEY> -d ~/tiles/landform -t lf -c ./configs/sg_lf.csv
     ```
-## Download Tile Data for Singapore
+### Download Tile Data for Singapore
 To download tiles for a region, at different zoom levels different bounding boxes should be used. Here are example bounding boxes for different zoom levels in Singapore:
 - For zoom levels `0` to `6`, the tiles for the entire globe should be downloaded.
 - For zoom levels `7` to `9`, the tiles should be downloaded based on the specified bounding box `80 -20 120 20`.
@@ -100,3 +100,23 @@ python3 tiledl.py -k <API_KEY> -d ~/tiles/v4 -t v4 -z 13 -b 103.5 0.9 104.2 1.6
 python3 tiledl.py -k <API_KEY> -d ~/tiles/v4 -t v4 -z 16 -b 103.6920359 1.1304753 104.0120359 1.4504753
 # repeat the above command changing zoom level from 16 onwards
 ```
+## Font Downloader Usage
+### Argument Table
+| Argument | Description | Default | Required |
+|-----------|-------------|---------|---------|
+| `--key` / `-k`   | Your MapTiler API key. | `get_your_own_OpIi9ZULNHzrESv6T2vL` | Yes |
+| `--dir` / `-d`   | The directory where the downloaded fonts will be saved. | `./fonts` | No |
+| `--fonts` / `-f`  | Space-separated list of font names to download,<br>if there is a space in the font's name, enclose it in quotes. | `'Noto Sans Regular' 'Noto Sans Italic' 'Noto Sans Bold'` | No |
+To download specific font tiles from MapTiler API, you can use the following command:
+```bash
+python3 fontdl.py -k <API_KEY> -d <dir> -f <font1> <font2> ...
+```
+### Examples
+1. To download the default fonts (`Noto Sans Regular`, `Noto Sans Italic`, `Noto Sans Bold`) from MapTiler API and save them in the `./fonts` folder, you would run:
+    ```bash
+    python3 fontdl.py -k <API_KEY>
+    ```
+2. To download specific fonts such as `Noto Sans Bold` and `Noto Sans Italic` and save them in a custom directory(`./my_fonts`), you would run:
+    ```bash
+    python3 fontdl.py -k <API_KEY> -d ./my_fonts -f "Noto Sans Bold" "Noto Sans Italic"
+    ```
