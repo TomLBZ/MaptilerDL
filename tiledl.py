@@ -24,7 +24,7 @@ class TileDLArguments:
     option: TileOption
     zoom: int
     bounds: TileBounds
-    config: str = ""
+    config: str
 @dataclass(frozen=True, slots=True, kw_only=True)
 class BackoffConfig:
     initial_wait: float = 1.0

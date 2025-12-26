@@ -107,10 +107,28 @@ python3 tiledl.py -k <API_KEY> -d ~/tiles/v4 -t v4 -z 16 -b 103.6920359 1.130475
 | `--key` / `-k`   | Your MapTiler API key. | `get_your_own_OpIi9ZULNHzrESv6T2vL` | Yes |
 | `--dir` / `-d`   | The directory where the downloaded fonts will be saved. | `./fonts` | No |
 | `--fonts` / `-f`  | Space-separated list of font names to download,<br>if there is a space in the font's name, enclose it in quotes. | `'Noto Sans Regular' 'Noto Sans Italic' 'Noto Sans Bold'` | No |
+| `--config` / `-c` | Path to a [configuration file](#configuration-file-1) for batch downloading fonts. | `""` | No |
+| `--help` / `-h`   | Show help message and exit. | N/A | N/A |
+
 To download specific font tiles from MapTiler API, you can use the following command:
 ```bash
 python3 fontdl.py -k <API_KEY> -d <dir> -f <font1> <font2> ...
 ```
+### Configuration File
+You can create a configuration file to specify multiple font names for batch downloading. The configuration file should contain one font name per line.
+- **Edit in Text Editor**
+    ```
+    Noto Sans Regular
+    Noto Sans Italic
+    Noto Sans Bold
+    ...
+    ```
+Some example configuration files are provided in this repository for downloading different font stacks. They are:
+- [sat.txt](./fontlists/sat.txt): Configuration file for downloading the fonts needed for the `satellite` map style.
+- [vx.txt](./fontlists/vx.txt): Configuration file for downloading the fonts needed for the `v3` or `v4` map styles.
+#### *Important Notes*
+- When using a configuration file, the `--fonts` argument will be ignored.
+- Make sure to only include valid font names that are available in the MapTiler API.
 ### Examples
 1. To download the default fonts (`Noto Sans Regular`, `Noto Sans Italic`, `Noto Sans Bold`) from MapTiler API and save them in the `./fonts` folder, you would run:
     ```bash
@@ -119,4 +137,8 @@ python3 fontdl.py -k <API_KEY> -d <dir> -f <font1> <font2> ...
 2. To download specific fonts such as `Noto Sans Bold` and `Noto Sans Italic` and save them in a custom directory(`./my_fonts`), you would run:
     ```bash
     python3 fontdl.py -k <API_KEY> -d ./my_fonts -f "Noto Sans Bold" "Noto Sans Italic"
+    ```
+3. To download fonts using the provided config file ([vx.txt](./fontlists/vx.txt)) and save them in the `~/fonts/vx` directory, you would run:
+    ```bash
+    python3 fontdl.py -k <API_KEY> -d ~/fonts/vx -c ./fontlists/vx.txt
     ```

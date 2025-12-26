@@ -21,6 +21,7 @@ class FontDLArguments:
     key: str
     dir: str
     fonts: List[str]
+    config: str
 @dataclass(frozen=True, slots=True, kw_only=True)
 class BackoffConfig:
     initial_wait: float = 1.0
@@ -46,12 +47,35 @@ def parse_arguments() -> FontDLArguments:
     parser.add_argument("-k", "--key", type=str, required=True, default="get_your_own_OpIi9ZULNHzrESv6T2vL", help="Your MapTiler API key.")
     parser.add_argument("-d", "--dir", type=str, default="./fonts", help="Directory to save downloaded font files.")
     parser.add_argument("-f", "--fonts", type=str, default=DEFAULT_FONTS, nargs='+', help="Font stack name(s) to download (e.g., 'Noto Sans Bold').")
+    parser.add_argument("-c", "--config", type=str, default="", help="Path to configuration file")
     args = parser.parse_args()
     return FontDLArguments(
         key=args.key,
         dir=args.dir,
-        fonts=[justify_fontname(fn) for fn in args.fonts]
+        fonts=[justify_fontname(fn) for fn in args.fonts],
+        config=args.config
     )
+def load_config(path: str) -> List[str]:
+    file_content: str
+    try:
+        with open(path, "r") as f:
+            file_content = f.read()
+    except Exception as e:
+        print(f"Error reading config file {path}: {e}")
+        return []
+    lines = file_content.strip().splitlines()
+    if not lines or len(lines) == 0:
+        print(f"Config file {path} is empty.")
+        return []
+    if all(line.strip() == "" or line.strip().startswith("#") for line in lines):
+        print(f"Config file {path} contains no valid font names.")
+        return []
+    fonts: List[str] = []
+    for line in lines:
+        line = line.strip()
+        if line and not line.startswith("#"):
+            fonts.append(justify_fontname(line))
+    return fonts
 def restore_fontname(fontname: str) -> str: # input fontname such as "noto-sans-bold", output "Noto Sans Bold"
     return " ".join([word.capitalize() for word in fontname.split("-")])
 def get_response_dynamic_backoff(gvar: GlobalVariables, bcfg: BackoffConfig, url: str) -> Optional[requests.Response]:
@@ -123,6 +147,24 @@ if __name__ == "__main__":
         exit(1)
     bcfg: BackoffConfig = BackoffConfig()
     gvars: GlobalVariables = GlobalVariables()
+    if args.config != "": # if using config file, load font names from there and ignore command line font names
+        if not os.path.exists(args.config):
+            print(f"Configuration file {args.config} does not exist. Exiting.")
+            exit(1)
+        if not os.access(args.config, os.R_OK):
+            print(f"Configuration file {args.config} is not readable. Exiting.")
+            exit(1)
+        print(f"Loading font names from configuration file {args.config}...")
+        config_fonts: List[str] = load_config(args.config)
+        if not config_fonts or len(config_fonts) == 0:
+            print(f"No valid font names found in configuration file {args.config}. Exiting.")
+            exit(1)
+        args = FontDLArguments(
+            key=args.key,
+            dir=args.dir,
+            fonts=config_fonts,
+            config=""
+        )
     for fontname in args.fonts:
         gvars.current_fontname = fontname
         try:
