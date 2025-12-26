@@ -120,6 +120,9 @@ def get_response_dynamic_backoff(gvar: GlobalVariables, bcfg: BackoffConfig, url
             if response.status_code == 200:
                 gvar.wait_sec = max(bcfg.min_wait, gvar.wait_sec * bcfg.success_factor)  # decrease wait time on success
                 return response
+            elif response.status_code == 204:
+                print(f"\n\tNo content (204), skipping this tile.")
+                return None
             else:
                 print(f"\n\tError {response.status_code}.")
                 print(f"\tRetrying in {gvar.wait_sec:.2f} seconds... ", end="", flush=True)
@@ -200,6 +203,8 @@ def download_tiles(gvar: GlobalVariables, args: TileDLArguments, bcfg: BackoffCo
             print(f"\r\tError downloading tile {args.zoom:>2}/{x:>{side_digits}}/{y:>{side_digits}}: {status_code}{' ':>{side_digits}}")
         time.sleep(gvar.wait_sec) # wait before next request
     print(f"\n\t...{gvar.downloaded_count} new tiles downloaded.")
+    gvar.total_downloaded_count += gvar.downloaded_count
+    gvar.downloaded_count = 0 # reset for next level
 
 if __name__ == "__main__":
     args: TileDLArguments = parse_arguments()
@@ -239,9 +244,8 @@ if __name__ == "__main__":
         print(f"Processing zoom level {level.zoom} with bounds {level.bounds}...")
         try:
             download_tiles(gvars, current_arguments, bcfg)
-            gvars.total_downloaded_count += gvars.downloaded_count
-            gvars.downloaded_count = 0 # reset for next level
         except KeyboardInterrupt:
             print(f"\n\t...{gvars.downloaded_count} new tiles downloaded.\nInterrupted by user.")
+            gvars.total_downloaded_count += gvars.downloaded_count
             break
     print(f"Done. Total new tiles downloaded: {gvars.total_downloaded_count}.")
